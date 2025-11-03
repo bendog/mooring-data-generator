@@ -1,0 +1,38 @@
+[project]
+name = "mooring-data-generator"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "faker>=37.12.0",
+    "pydantic>=2.12.3",
+]
+# UV Build tooling
+[build-system]
+requires = ["uv_build>=0.8.11"]
+build-backend = "uv_build"
+
+# RUFF settings
+[tool.ruff]
+target-version = "py313"
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    "C",  # mccabe rules
+    "F",  # pyflakes rules
+    "E",  # pycodestyle error rules
+    "W",  # pycodestyle warning rules
+    "B",  # flake8-bugbear rules
+    "I",  # isort rules
+]
+ignore = [
+    # "C901",  # max-complexity-10
+    "E501",  # line-too-long
+]
+
+# Rumdl settings
+# This is a tool for formatting markdown files, it can be used to fix issues automatically.
+[tool.rumdl]
+line-length = 100
