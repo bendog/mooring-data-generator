@@ -31,24 +31,17 @@ class BasePayloadModel(BaseModel):
     )
 
 
-class BerthData(BasePayloadModel):
-    name: Annotated[str, Field(pattern=r"^Berth [A-Z]$")]
-    port: str  # the name of the port
-    bent_count: Annotated[int, Field(gt=0, lt=40)]  # the count of bents: min 9 | max 15
-    hook_count: Annotated[int, Field(gt=0, lt=60)]  # the count of hooks: min 27 | max 48
-
-
 class ShipData(BasePayloadModel):
     name: str
-    vessel_id: Annotated[int, Field(gt=2000, lt=9999)]
+    vessel_id: Annotated[str, Field(pattern=r"^[0-9]{4}$")]
 
 
 class RadarData(BasePayloadModel):
     name: Annotated[str, Field(pattern=r"^B[A-Z]RD[0-9]$")]
     # Radar Should share the name of the Berth, Berth A Radar 1 = BARD1
-    ship_distance: Annotated[float, Field(ge=0, lt=100)]
+    ship_distance: Annotated[float, Field(ge=0, lt=100)] | None
     # min 2.8 - 6.7 | max 3.4 - 30.7
-    distance_change: Annotated[float, Field(gt=-100, lt=100)]
+    distance_change: Annotated[float, Field(gt=-100, lt=100)] | None
     # min 0.0007 - 0.06 | max 0.029 - 5.76
     distance_status: Literal["INACTIVE", "ACTIVE"]
 
@@ -66,8 +59,15 @@ class BentData(BasePayloadModel):
     hooks: list[HookData]
 
 
-class MooringData(BasePayloadModel):
-    berth: BerthData
+class BerthData(BasePayloadModel):
+    name: Annotated[str, Field(pattern=r"^Berth [A-Z]$")]
+    bent_count: Annotated[int, Field(gt=0, lt=40)]  # the count of bents: min 9 | max 15
+    hook_count: Annotated[int, Field(gt=0, lt=60)]  # the count of hooks: min 27 | max 48
     ship: ShipData
     radars: list[RadarData]
     bents: list[BentData]
+
+
+class PortData(BasePayloadModel):
+    name: str  # the name of the port
+    berths: list[BerthData]
