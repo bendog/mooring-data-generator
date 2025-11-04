@@ -1,8 +1,11 @@
 import json
+import logging
 import random
 from math import ceil
 
-from models import BentData, BerthData, HookData, PortData, RadarData, ShipData
+from .models import BentData, BerthData, HookData, PortData, RadarData, ShipData
+
+logger = logging.getLogger(__name__)
 
 # A list of well-known Western Australian port names
 WA_PORT_NAMES: list[str] = [
@@ -330,7 +333,7 @@ def main() -> None:
     port = build_random_port()
     # Use Pydantic's by_alias to apply PascalCase field names from BasePayloadModel
     payload = port.data.model_dump(by_alias=True)
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    logger.info(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -8,6 +8,10 @@ dependencies = [
     "faker>=37.12.0",
     "pydantic>=2.12.3",
 ]
+
+[project.scripts]
+mooring-data-generator = "mooring_data_generator.cli:main"
+
 # UV Build tooling
 [build-system]
 requires = ["uv_build>=0.8.11"]
