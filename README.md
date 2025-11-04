@@ -17,6 +17,8 @@ If you don't have UV on your system, read [the install instructions for UV](http
 uvx mooring-data-generator http://127.0.0.1:8000/my/endpoint/
 ```
 
+[//]: # (TODO: this needs to be confirmed after we release the package to PyPI)
+
 > [!IMPORTANT]
 > replace `http://127.0.0.1:8000/my/endpoint/` with the appropriate url for your system
 
@@ -25,14 +27,60 @@ uvx mooring-data-generator http://127.0.0.1:8000/my/endpoint/
 #### Install the package
 
 ```shell
-pip install mooring-data-generator
+pip install -U mooring-data-generator
 ```
 
-#### Running the package
+### Running the package
+
+```shell
+mooring-data-generator http://127.0.0.1:8000/my/endpoint/
+```
+
+> [!IMPORTANT]
+> replace `http://127.0.0.1:8000/my/endpoint/` with the appropriate url for your system
+
+## Testing data is being sent
+
+There's a helper application included in this package
+to allow you to check that the data is being sent.
+
+`mooring-data-receiver` will display to the console all http traffic it receives.
+
+```shell
+mooring-data-receiver
+```
+
+By default it will run listening to any traffic `0.0.0.0` on port `8000`
+
+You can adjust this if needed by using a commend like
+
+```shell
+mooring-data-receiver --host 127.0.0.1 --port 5000
+```
+
+## Troubleshooting
+
+### Command not found
+
+If you are having trouble with the command not being found,
+you can attempt to run it as a module calling python
 
 ```shell
 python -m mooring-data-generator http://127.0.0.1:8000/my/endpoint/
 ```
 
-> [!IMPORTANT]
-> replace `http://127.0.0.1:8000/my/endpoint/` with the appropriate url for your system
+### Pip not found
+
+If `pip` can't be found on your system.
+
+First, make sure you have Python installed.
+
+```shell
+python --version
+```
+
+you can call `pip` from python directly as a module.
+
+```shell
+python -m pip install -U mooring-data-generator
+```

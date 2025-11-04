@@ -1,6 +1,6 @@
 [project]
 name = "mooring-data-generator"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -11,6 +11,7 @@ dependencies = [
 
 [project.scripts]
 mooring-data-generator = "mooring_data_generator.cli:main"
+mooring-data-receiver = "mooring_data_receiver.http_server:cli"
 
 # UV Build tooling
 [build-system]
