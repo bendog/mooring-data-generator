@@ -1,20 +1,32 @@
 [project]
 name = "mooring-data-generator"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
-    "pydantic>=2.12.3",
+    "pydantic>=2.8",
 ]
 
 [project.scripts]
 mooring-data-generator = "mooring_data_generator.cli:main"
 mooring-data-receiver = "mooring_data_receiver.http_server:cli"
 
+[dependency-groups]
+dev = [
+    "pytest~=8.4",
+]
+test = [
+    "tox~=4.32",
+    "tox-uv>=1.20.0",
+]
+build = [
+    "uv-build~=0.9",
+]
+
 # UV Build tooling
 [build-system]
-requires = ["uv_build>=0.8.11"]
+requires = ["uv_build>=0.9"]
 build-backend = "uv_build"
 
 # RUFF settings
