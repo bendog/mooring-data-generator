@@ -90,6 +90,7 @@ python -m pip install -U mooring-data-generator
 ### Be sure the tests pass
 
 ```shell
+uv sync --all-groups
 uv run ruff format
 uv run ruff check
 uv run tox

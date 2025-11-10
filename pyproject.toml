@@ -1,6 +1,6 @@
 [project]
 name = "mooring-data-generator"
-version = "0.9.0"
+version = "0.9.1"
 description = "Random-data generator to simulate fictional port data flows for use at a Hackathon"
 authors = [
   {name = "Ben Fitzhardinge", email = "ben@benjamin.dog"},
