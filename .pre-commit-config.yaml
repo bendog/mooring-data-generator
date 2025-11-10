@@ -31,14 +31,14 @@ repos:
 
 # commit messages
 -   repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.9.1
+    rev: v4.10.0
     hooks:
     -   id: commitizen
         stages: [commit-msg]
 
 # Markdown tools
 -   repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.0.173 # Use the latest release tag
+    rev: v0.0.174 # Use the latest release tag
     hooks:
     -   id: rumdl
         # To automatically fix issues:

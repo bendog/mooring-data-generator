@@ -15,6 +15,9 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
     - Avoids using any external packages
     """
 
+    # Max bytes of body to show; set to None for full body
+    max_show = MAX_SHOW
+
     # Disable default logging to stderr; we print our own structured output
     def log_message(self, format: str, *args) -> None:  # noqa: A003 - match BaseHTTPRequestHandler
         return
@@ -42,15 +45,18 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             print(f"{k}: {v}")
         if body:
             print("-- Body (bytes) --")
-            # Safely limit body printout size
-
-            shown = body[:MAX_SHOW]
+            # Safely limit body printout size (unless max_show is None)
+            ms = getattr(self, "max_show", MAX_SHOW)
+            if ms is None:
+                shown = body
+            else:
+                shown = body[:ms]
             try:
                 print(shown.decode("utf-8", errors="replace"))
             except Exception:
                 print(repr(shown))
-            if len(body) > MAX_SHOW:
-                print(f"-- {len(body) - MAX_SHOW} more bytes not shown --")
+            if ms is not None and len(body) > ms:
+                print(f"-- {len(body) - ms} more bytes not shown --")
         else:
             print("-- No Body --")
         print("=" * 80)
@@ -138,8 +144,19 @@ def cli(argv: list[str] | None = None) -> None:
         default="0.0.0.0",
         help="Host/interface to bind (default: 0.0.0.0)",
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Print full request bodies without truncation",
+    )
 
     args = parser.parse_args(argv)
+
+    # Configure handler truncation behavior
+    if args.full:
+        PrintingRequestHandler.max_show = None  # show full body
+    else:
+        PrintingRequestHandler.max_show = MAX_SHOW
 
     serve(port=args.port, host=args.host)
 
