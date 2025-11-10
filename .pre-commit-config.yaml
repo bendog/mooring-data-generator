@@ -38,7 +38,7 @@ repos:
 
 # Markdown tools
 -   repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.0.172 # Use the latest release tag
+    rev: v0.0.173 # Use the latest release tag
     hooks:
     -   id: rumdl
         # To automatically fix issues:
@@ -68,18 +68,3 @@ repos:
     rev: v0.11.0.1
     hooks:
     -   id: shellcheck
-
-# Security tools
--   repo: https://github.com/bridgecrewio/checkov.git
-    rev: '3.2.490' # change to tag or sha
-    hooks:
-    -   id: checkov_diff
-        args:
-        -   '--skip-check'
-        -   'CKV_DOCKER_2,CKV_SECRET_6'
-        -   '--quiet'
-        -   '-f' # required and must come last
-    -   id: checkov_secrets
-        args:
-        -   '--quiet'
-        -   '-f' # required and must come last

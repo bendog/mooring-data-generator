@@ -1,0 +1,39 @@
+name: python-test.yml
+
+on: push
+
+jobs:
+  ruff-check:
+    name: ruff-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install the project
+        run: uv sync --locked --all-groups
+
+      - name: Run ruff format check
+        run: uv run ruff format --check
+
+      - name: Run ruff check
+        run: uv run ruff check
+
+  tox-tests:
+    name: tox-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install the project
+        run: uv sync --locked --all-groups
+
+      - name: Run tests
+        run: uv run tox
