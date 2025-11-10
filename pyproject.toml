@@ -1,6 +1,6 @@
 [project]
 name = "mooring-data-generator"
-version = "0.9.1"
+version = "0.9.2"
 description = "Random-data generator to simulate fictional port data flows for use at a Hackathon"
 authors = [
   {name = "Ben Fitzhardinge", email = "ben@benjamin.dog"},
@@ -34,7 +34,7 @@ dependencies = [
 
 [project.scripts]
 mooring-data-generator = "mooring_data_generator.cli:main"
-mooring-data-receiver = "mooring_data_receiver.http_server:cli"
+mooring-data-receiver = "mooring_data_generator.receiver:cli"
 
 [dependency-groups]
 dev = [

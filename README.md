@@ -14,17 +14,10 @@ The script will run forever until the user sends a Ctrl+C command to end the scr
 If you don't have UV on your system, read [the install instructions for UV](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```shell
-uvx mooring-data-generator http://127.0.0.1:8000/my/endpoint/
+uv tool install mooring-data-generator
 ```
 
-[//]: # (TODO: this needs to be confirmed after we release the package to PyPI)
-
-> [!IMPORTANT]
-> replace `http://127.0.0.1:8000/my/endpoint/` with the appropriate url for your system
-
 ### Vanilla python (If you don't want UV)
-
-#### Install the package
 
 ```shell
 pip install -U mooring-data-generator
