@@ -14,7 +14,7 @@ The script will run forever until the user sends a Ctrl+C command to end the scr
 If you don't have UV on your system, read [the install instructions for UV](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```shell
-uv tool install mooring-data-generator
+uv tool install -U mooring-data-generator
 ```
 
 ### Vanilla python (If you don't want UV)
