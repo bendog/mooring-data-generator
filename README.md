@@ -84,3 +84,28 @@ you can call `pip` from python directly as a module.
 ```shell
 python -m pip install -U mooring-data-generator
 ```
+
+## Release a new version
+
+### Be sure the tests pass
+
+```shell
+uv run ruff format
+uv run ruff check
+uv run tox
+```
+
+### bump version and tag new release
+
+```shell
+uv version --bump minor
+git commit -am "Release version v$(uv version --short)"
+git tag -a "v$(uv version --short)" -m "v$(uv version --short)"
+```
+
+### push to github
+
+```shell
+git push
+git push --tags
+```
