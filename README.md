@@ -7,7 +7,7 @@ These will be http POST queries to the url provided as an argument at run time.
 
 The script will run forever until the user sends a Ctrl+C command to end the script.
 
-## Usage
+## Install
 
 ### With UV (recommended)
 
@@ -23,7 +23,11 @@ uv tool install -U mooring-data-generator
 pip install -U mooring-data-generator
 ```
 
+## Usage
+
 ### Running the package
+
+#### Sending data via HTTP POST
 
 ```shell
 mooring-data-generator http://127.0.0.1:8000/my/endpoint/
@@ -31,6 +35,19 @@ mooring-data-generator http://127.0.0.1:8000/my/endpoint/
 
 > [!IMPORTANT]
 > replace `http://127.0.0.1:8000/my/endpoint/` with the appropriate url for your system
+
+#### Saving data to a file
+
+You can also save the generated mooring data to a JSON file instead of sending it via HTTP:
+
+```shell
+mooring-data-generator --file output.json
+```
+
+This will continuously generate mooring data and save it to the specified file.
+
+> [!NOTE]
+> You can only use either the URL (HTTP POST) or `--file` option, not both at the same time
 
 ## Testing data is being sent
 
