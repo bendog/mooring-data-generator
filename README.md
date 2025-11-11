@@ -49,6 +49,29 @@ This will continuously generate mooring data and save it to the specified file.
 > [!NOTE]
 > You can only use either the URL (HTTP POST) or `--file` option, not both at the same time
 
+#### Getting the OpenAPI specification
+
+You can output an OpenAPI 3.0 specification for the mooring data format:
+
+```shell
+mooring-data-generator --openapi
+```
+
+This will print a complete OpenAPI specification in JSON format
+that describes the structure of the mooring data being generated.
+This is useful for:
+
+- Understanding the data format
+- Generating client libraries
+- API documentation
+- Integration planning
+
+The specification can be saved to a file for use with OpenAPI tools:
+
+```shell
+mooring-data-generator --openapi > openapi.json
+```
+
 ## Testing data is being sent
 
 There's a helper application included in this package

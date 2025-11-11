@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from . import file_worker, http_worker
+from .openapi import generate_openapi_spec
 
 logger = logging.getLogger(__name__)
 
@@ -11,11 +12,22 @@ parser.add_argument(
     "url", nargs="?", help="HTTP endpoint URL (required if --file is not provided)"
 )
 parser.add_argument("--file", type=str, help="Path to output JSON file (e.g., path/filename.json)")
+parser.add_argument(
+    "--openapi",
+    action="store_true",
+    help="Output OpenAPI specification for the data output instead of running the generator",
+)
 
 
 def main() -> None:
     """Run the cli tooling for mooring data generator"""
     args = parser.parse_args()
+
+    # Handle --openapi flag
+    if args.openapi:
+        spec = generate_openapi_spec()
+        print(spec)
+        return
 
     # Validate that either url or --file is provided
     if not args.url and not args.file:

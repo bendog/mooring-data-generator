@@ -1,3 +1,4 @@
+import json
 import sys
 from types import SimpleNamespace
 
@@ -58,3 +59,87 @@ def test_main_exits_when_no_url_provided(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert exc.value.code == 2
+
+
+def test_main_with_openapi_flag_outputs_valid_json(monkeypatch, capsys):
+    # Arrange: provide --openapi flag
+    monkeypatch.setattr(sys, "argv", ["prog", "--openapi"], raising=True)
+
+    import mooring_data_generator.cli as cli
+
+    # Act
+    cli.main()
+
+    # Assert: output is valid JSON
+    out = capsys.readouterr().out
+    parsed = json.loads(out)  # Should not raise exception
+    assert parsed is not None
+    assert isinstance(parsed, dict)
+
+
+def test_main_with_openapi_flag_outputs_valid_openapi_spec(monkeypatch, capsys):
+    # Arrange: provide --openapi flag
+    monkeypatch.setattr(sys, "argv", ["prog", "--openapi"], raising=True)
+
+    import mooring_data_generator.cli as cli
+
+    # Act
+    cli.main()
+
+    # Assert: output contains OpenAPI specification structure
+    out = capsys.readouterr().out
+    spec = json.loads(out)
+
+    # Check required OpenAPI fields
+    assert "openapi" in spec
+    assert spec["openapi"].startswith("3.0")
+    assert "info" in spec
+    assert "title" in spec["info"]
+    assert "version" in spec["info"]
+    assert "paths" in spec
+    assert "components" in spec
+    assert "schemas" in spec["components"]
+
+
+def test_main_with_openapi_flag_does_not_require_url(monkeypatch, capsys):
+    # Arrange: provide only --openapi flag, no url
+    monkeypatch.setattr(sys, "argv", ["prog", "--openapi"], raising=True)
+
+    import mooring_data_generator.cli as cli
+
+    # Act: should not raise SystemExit
+    cli.main()
+
+    # Assert: successfully generated output
+    out = capsys.readouterr().out
+    spec = json.loads(out)
+    assert "openapi" in spec
+
+
+def test_main_with_openapi_flag_does_not_run_generator(monkeypatch, capsys):
+    # Arrange: provide --openapi flag and mock run to ensure it's not called
+    called = SimpleNamespace(http_called=False, file_called=False)
+
+    def fake_http_run(url: str) -> None:
+        called.http_called = True
+
+    def fake_file_run(file_path) -> None:
+        called.file_called = True
+
+    monkeypatch.setattr("mooring_data_generator.http_worker.run", fake_http_run, raising=True)
+    monkeypatch.setattr("mooring_data_generator.file_worker.run", fake_file_run, raising=True)
+    monkeypatch.setattr(sys, "argv", ["prog", "--openapi"], raising=True)
+
+    import mooring_data_generator.cli as cli
+
+    # Act
+    cli.main()
+
+    # Assert: neither worker was called
+    assert not called.http_called
+    assert not called.file_called
+
+    # Assert: OpenAPI spec was output
+    out = capsys.readouterr().out
+    spec = json.loads(out)
+    assert "openapi" in spec
