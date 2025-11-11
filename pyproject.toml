@@ -1,6 +1,6 @@
 [project]
 name = "mooring-data-generator"
-version = "0.11.0"
+version = "0.11.1"
 description = "Random-data generator to simulate fictional port data flows for use at a Hackathon"
 authors = [
   {name = "Ben Fitzhardinge", email = "ben@benjamin.dog"},
@@ -35,6 +35,12 @@ dependencies = [
 [project.scripts]
 mooring-data-generator = "mooring_data_generator.cli:main"
 mooring-data-receiver = "mooring_data_generator.receiver:cli"
+
+[project.urls]
+Homepage = "https://github.com/bendog/mooring-data-generator"
+Repository = "https://github.com/bendog/mooring-data-generator"
+Issues = "https://github.com/bendog/mooring-data-generator/issues"
+Changelog = "https://github.com/bendog/mooring-data-generator/releases"
 
 [dependency-groups]
 dev = [
