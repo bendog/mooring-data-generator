@@ -29,7 +29,7 @@ def run(url: str) -> None:
             try:
                 print(f"    loop: {loops:<8} sending payload: {payloads}", end="\r")
                 payload = port.data.model_dump(by_alias=True)
-                data_bytes = json.dumps(payload, indent=2).encode("utf-8")
+                data_bytes = json.dumps(payload).encode("utf-8")
                 req = urllib.request.Request(
                     url,
                     data=data_bytes,
