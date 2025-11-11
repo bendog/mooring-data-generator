@@ -110,3 +110,62 @@ def test_options_returns_cors_headers(http_server):
     assert headers.get("Access-Control-Allow-Headers") == "*, Content-Type, Authorization"
     # No body required
     assert body in (b"", None)
+
+
+def test_post_with_format_mode_uses_json_dumps(http_server, capsys):
+    base_url, _ = http_server
+
+    orig_format = PrintingRequestHandler.format_mode
+    try:
+        PrintingRequestHandler.format_mode = True
+        payload = b'{"test": "content", "value": 123}'
+        status, headers, body = _http(
+            "POST",
+            f"{base_url}/test",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        assert status == 200
+        assert body == b"OK\n"
+
+        out = capsys.readouterr().out
+        # Should still have standard headers
+        assert "Client: " in out
+        assert "Request: POST /test " in out
+        assert "-- Headers --" in out
+        assert "-- Body (bytes) --" in out
+        # Body should be JSON-formatted with indentation (json.dumps with indent=2)
+        assert '"test": "content"' in out
+        assert '"value": 123' in out
+    finally:
+        PrintingRequestHandler.format_mode = orig_format
+
+
+def test_post_without_format_mode_plain_output(http_server, capsys):
+    base_url, _ = http_server
+
+    orig_format = PrintingRequestHandler.format_mode
+    try:
+        PrintingRequestHandler.format_mode = False
+        payload = b"test content"
+        status, headers, body = _http(
+            "POST",
+            f"{base_url}/test",
+            data=payload,
+            headers={"Content-Type": "text/plain"},
+        )
+        assert status == 200
+        assert body == b"OK\n"
+
+        out = capsys.readouterr().out
+        # Should have standard output format
+        assert "Client: " in out
+        assert "Request: POST /test " in out
+        assert "-- Headers --" in out
+        assert "-- Body (bytes) --" in out
+        # Body should be plain text (not JSON-formatted)
+        assert "test content" in out
+        # Should NOT have JSON quotes around it
+        assert out.count('"test content"') == 0
+    finally:
+        PrintingRequestHandler.format_mode = orig_format

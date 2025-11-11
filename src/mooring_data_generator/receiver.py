@@ -1,7 +1,7 @@
 import argparse
+import json
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Tuple
 
 DEFAULT_PORT = 8000
 MAX_SHOW = 1024 * 1
@@ -16,7 +16,10 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
     """
 
     # Max bytes of body to show; set to None for full body
-    max_show = MAX_SHOW
+    max_show: int = MAX_SHOW
+
+    # Format mode: None for default, "json" for JSON output
+    format_mode: bool = False
 
     # Disable default logging to stderr; we print our own structured output
     def log_message(self, format: str, *args) -> None:  # noqa: A003 - match BaseHTTPRequestHandler
@@ -28,7 +31,25 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             return self.rfile.read(length)
         return b""
 
+    def _print_body(self, body: bytes, content_type: str) -> None:
+        """Safely limit body printout size (unless max_show is None"""
+        if self.format_mode:
+            if content_type == "application/json":
+                body = json.dumps(json.loads(body.decode("utf-8")), indent=2).encode("utf-8")
+        if self.max_show is None:
+            shown = body
+        else:
+            shown = body[: self.max_show]
+        try:
+            print(shown.decode("utf-8", errors="replace"))
+        except Exception as e:
+            print(f"-- {e}")
+            print(repr(shown))
+        if self.max_show is not None and len(body) > self.max_show:
+            print(f"-- {len(body) - self.max_show} more bytes not shown --")
+
     def _print_request(self, body: bytes) -> None:
+        """print the request to stdoutmo"""
         # First line
         http_version = {
             9: "HTTP/0.9",
@@ -45,18 +66,8 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             print(f"{k}: {v}")
         if body:
             print("-- Body (bytes) --")
-            # Safely limit body printout size (unless max_show is None)
-            ms = getattr(self, "max_show", MAX_SHOW)
-            if ms is None:
-                shown = body
-            else:
-                shown = body[:ms]
-            try:
-                print(shown.decode("utf-8", errors="replace"))
-            except Exception:
-                print(repr(shown))
-            if ms is not None and len(body) > ms:
-                print(f"-- {len(body) - ms} more bytes not shown --")
+            content_type = self.headers.get("Content-Type", "")
+            self._print_body(body, content_type)
         else:
             print("-- No Body --")
         print("=" * 80)
@@ -112,7 +123,7 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             return 11  # assume HTTP/1.1 if unknown
 
 
-def serve(port: int = DEFAULT_PORT, host: str = "0.0.0.0") -> Tuple[str, int]:
+def serve(port: int = DEFAULT_PORT, host: str = "0.0.0.0") -> tuple[str, int]:
     """Start the HTTP server and block forever.
 
     Returns the actual bound address (host, port). Useful when passing port=0.
@@ -149,6 +160,11 @@ def cli(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Print full request bodies without truncation",
     )
+    parser.add_argument(
+        "--format",
+        action="store_true",
+        help="Output format for request content (json uses json.dumps, otherwise content as received)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -157,6 +173,10 @@ def cli(argv: list[str] | None = None) -> None:
         PrintingRequestHandler.max_show = None  # show full body
     else:
         PrintingRequestHandler.max_show = MAX_SHOW
+
+    # Configure output format
+    if args.format:
+        PrintingRequestHandler.format_mode = args.format
 
     serve(port=args.port, host=args.host)
 

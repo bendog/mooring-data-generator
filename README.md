@@ -68,6 +68,18 @@ You can adjust this if needed by using a commend like
 mooring-data-receiver --host 127.0.0.1 --port 5000
 ```
 
+### Formatting output
+
+You can use the `--format` flag to control how the request body is displayed:
+
+```shell
+mooring-data-receiver --format
+```
+
+When `--format` is used, the request body content
+will be formatted using `json.dumps(indent=2)` for better readability.
+Without this flag, the content is displayed as received.
+
 ## Troubleshooting
 
 ### Command not found
