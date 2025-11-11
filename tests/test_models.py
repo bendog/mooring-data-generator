@@ -12,18 +12,18 @@ from mooring_data_generator.models import (
 )
 
 
-def test_shipdata_serializes_with_pascal_case_aliases():
+def test_ship_data_serializes_with_camel_case_aliases():
     ship = ShipData(name="Evergreen", vessel_id="1234")
 
     dumped = ship.model_dump(by_alias=True)
 
     # Keys should be PascalCase
-    assert set(dumped.keys()) == {"Name", "VesselId"}
-    assert dumped["Name"] == "Evergreen"
-    assert dumped["VesselId"] == "1234"
+    assert set(dumped.keys()) == {"name", "vesselId"}
+    assert dumped["name"] == "Evergreen"
+    assert dumped["vesselId"] == "1234"
 
 
-def test_shipdata_invalid_vessel_id_raises():
+def test_ship_data_invalid_vessel_id_raises():
     # Not 4 digits
     with pytest.raises(ValidationError):
         ShipData(name="Evergreen", vessel_id="12A4")
@@ -31,7 +31,7 @@ def test_shipdata_invalid_vessel_id_raises():
         ShipData(name="Evergreen", vessel_id="12345")
 
 
-def test_radardata_valid_and_constraints():
+def test_radar_data_valid_and_constraints():
     # Valid
     radar = RadarData(
         name="BARD1",
@@ -39,7 +39,7 @@ def test_radardata_valid_and_constraints():
         distance_change=0.5,
         distance_status="ACTIVE",
     )
-    assert radar.model_dump(by_alias=True)["Name"] == "BARD1"
+    assert radar.model_dump(by_alias=True)["name"] == "BARD1"
 
     # ship_distance must be >= 0 and < 100; None allowed
     RadarData(name="BCRD2", ship_distance=None, distance_change=None, distance_status="INACTIVE")
@@ -68,10 +68,10 @@ def test_radardata_valid_and_constraints():
         RadarData(name="BARD1", ship_distance=1.0, distance_change=0.0, distance_status="ON")
 
 
-def test_hookdata_name_and_tension_bounds():
+def test_hook_data_name_and_tension_bounds():
     # Valid
     h = HookData(name="Hook 12", tension=55, faulted=False, attached_line="BREAST")
-    assert h.model_dump(by_alias=True)["Name"] == "Hook 12"
+    assert h.model_dump(by_alias=True)["name"] == "Hook 12"
 
     # Name pattern
     with pytest.raises(ValidationError):
@@ -97,7 +97,7 @@ def test_bollard_data_and_berth_data_nested_valid():
         HookData(name="Hook 2", tension=20, faulted=True, attached_line="BREAST"),
     ]
     bollard = BollardData(name="BOL123", hooks=hooks)
-    assert bollard.model_dump(by_alias=True)["Name"] == "BOL123"
+    assert bollard.model_dump(by_alias=True)["name"] == "BOL123"
 
     berth = BerthData(
         name="Berth A",
@@ -114,8 +114,8 @@ def test_bollard_data_and_berth_data_nested_valid():
 
     dumped = berth.model_dump(by_alias=True)
     # Spot-check nested alias keys exist
-    assert "Name" in dumped and "BollardCount" in dumped and "HookCount" in dumped
-    assert "Ship" in dumped and "Radars" in dumped and "Bollards" in dumped
+    assert "name" in dumped and "bollardCount" in dumped and "hookCount" in dumped
+    assert "ship" in dumped and "radars" in dumped and "bollards" in dumped
 
     # Name pattern and counts bounds
     with pytest.raises(ValidationError):
@@ -182,8 +182,8 @@ def test_port_data_full_payload_and_aliases():
     )
 
     dumped = port.model_dump(by_alias=True)
-    assert set(dumped.keys()) == {"Name", "Berths"}
-    assert isinstance(dumped["Berths"], list) and dumped["Berths"]
+    assert set(dumped.keys()) == {"name", "berths"}
+    assert isinstance(dumped["berths"], list) and dumped["berths"]
 
 
 def test_tension_limits_dict_shape_and_values():

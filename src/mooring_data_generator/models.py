@@ -26,7 +26,7 @@ TENSION_LIMITS: dict[str, TensionLimits] = {
 class BasePayloadModel(BaseModel):
     model_config = ConfigDict(
         alias_generator=AliasGenerator(
-            serialization_alias=alias_generators.to_pascal,  # TODO: should be camel not pascal
+            serialization_alias=alias_generators.to_camel,
         )
     )
 
