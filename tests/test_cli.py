@@ -13,8 +13,8 @@ def test_main_invokes_run_and_prints(monkeypatch, capsys, caplog):
         # Do not loop or block; just return
         return
 
-    # Patch run in the cli module namespace
-    monkeypatch.setattr("mooring_data_generator.cli.run", fake_run, raising=True)
+    # Patch run in the http_worker module
+    monkeypatch.setattr("mooring_data_generator.http_worker.run", fake_run, raising=True)
 
     # Patch argv for argparse within cli.main
     monkeypatch.setenv("PYTHONHASHSEED", "0")  # stability for any hashing if needed
