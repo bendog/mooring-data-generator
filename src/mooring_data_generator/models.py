@@ -26,7 +26,7 @@ TENSION_LIMITS: dict[str, TensionLimits] = {
 class BasePayloadModel(BaseModel):
     model_config = ConfigDict(
         alias_generator=AliasGenerator(
-            serialization_alias=alias_generators.to_pascal,
+            serialization_alias=alias_generators.to_pascal,  # TODO: should be camel not pascal
         )
     )
 
@@ -53,19 +53,19 @@ class HookData(BasePayloadModel):
     attached_line: Literal["BREAST", "HEAD", "SPRING", "STERN"] | None
 
 
-class BentData(BasePayloadModel):
-    name: Annotated[str, Field(pattern=r"^BNT[0-9]{3}$")]
-    # naming convention BNT + unique id
+class BollardData(BasePayloadModel):
+    name: Annotated[str, Field(pattern=r"^BOL[0-9]{3}$")]
+    # naming convention BOL + unique id
     hooks: list[HookData]
 
 
 class BerthData(BasePayloadModel):
     name: Annotated[str, Field(pattern=r"^Berth [A-Z]$")]
-    bent_count: Annotated[int, Field(gt=0, lt=40)]  # the count of bents: min 9 | max 15
+    bollard_count: Annotated[int, Field(gt=0, lt=40)]  # the count of bollards: min 9 | max 15
     hook_count: Annotated[int, Field(gt=0, lt=60)]  # the count of hooks: min 27 | max 48
     ship: ShipData
     radars: list[RadarData]
-    bents: list[BentData]
+    bollards: list[BollardData]
 
 
 class PortData(BasePayloadModel):

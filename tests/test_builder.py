@@ -30,7 +30,7 @@ def test_random_name_helpers_use_globals_and_are_unique(monkeypatch):
     monkeypatch.setattr(builder, "NAUTICAL_SUPERLATIVES", ["Valiant", "Noble"])  # type: ignore[attr-defined]
     monkeypatch.setattr(builder, "NAUTICAL_BASE_NAMES", ["Amelia", "Sophia"])  # type: ignore[attr-defined]
     monkeypatch.setattr(builder, "WA_PORT_NAMES", ["Fremantle", "Kwinana"])  # type: ignore[attr-defined]
-    monkeypatch.setattr(builder, "BENT_NAMES", ["BNT001", "BNT002"])  # type: ignore[attr-defined]
+    monkeypatch.setattr(builder, "BOLLARD_NAMES", ["BOL001", "BOL002"])  # type: ignore[attr-defined]
 
     # Always pick the first available
     monkeypatch.setattr(builder.random, "choice", lambda seq: seq[0])
@@ -47,10 +47,10 @@ def test_random_name_helpers_use_globals_and_are_unique(monkeypatch):
     port2 = builder.random_wa_port_name()
     assert {port1, port2} == {"Fremantle", "Kwinana"}
 
-    # Bent name unique selection
-    bent1 = builder.random_bent_name()
-    bent2 = builder.random_bent_name()
-    assert {bent1, bent2} == {"BNT001", "BNT002"}
+    # Bollard name unique selection
+    bollard1 = builder.random_bollard_name()
+    bollard2 = builder.random_bollard_name()
+    assert {bollard1, bollard2} == {"BOL001", "BOL002"}
 
 
 def test_generate_ship_uses_ship_ids_and_name(monkeypatch):
@@ -109,7 +109,7 @@ def test_hookworker_inactive_has_no_tension(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "bent_number,total_bents,expected_line",
+    "bollard_number,total_bollards,expected_line",
     [
         (1, 10, "HEAD"),  # 0.1
         (3, 10, "SPRING"),  # 0.3
@@ -117,8 +117,8 @@ def test_hookworker_inactive_has_no_tension(monkeypatch):
         (9, 10, "STERN"),  # 0.9
     ],
 )
-def test_bentworker_hook_attachment_and_numbering(
-    monkeypatch, bent_number, total_bents, expected_line
+def test_bollardworker_hook_attachment_and_numbering(
+    monkeypatch, bollard_number, total_bollards, expected_line
 ):
     # Ensure hooks start with expected numbers and are active so attached_line is set
     monkeypatch.setattr(
@@ -132,15 +132,15 @@ def test_bentworker_hook_attachment_and_numbering(
         builder.random, "choices", lambda seq, weights=None: [False]
     )  # non-faulted
     monkeypatch.setattr(builder.random, "gauss", lambda mu, sigma: 1.1)  # tension -> ceil(1.1)=2
-    # Deterministic bent names
-    monkeypatch.setattr(builder, "random_bent_name", lambda: f"BNT{bent_number:03d}")
+    # Deterministic bollard names
+    monkeypatch.setattr(builder, "random_bollard_name", lambda: f"BOL{bollard_number:03d}")
 
-    bw = builder.BentWorker(bent_number=bent_number, total_bents=total_bents)
+    bw = builder.BollardWorker(bollard_number=bollard_number, total_bollards=total_bollards)
 
-    # 3 hooks per bent
+    # 3 hooks per bollard
     assert len(bw.hooks) == builder.HOOK_COUNT_MULTIPLIER
     # Verify numbering
-    start = (bent_number * builder.HOOK_COUNT_MULTIPLIER) - builder.HOOK_COUNT_MULTIPLIER + 1
+    start = (bollard_number * builder.HOOK_COUNT_MULTIPLIER) - builder.HOOK_COUNT_MULTIPLIER + 1
     names = [h.name for h in bw.hooks]
     assert names == [f"Hook {n}" for n in range(start, start + builder.HOOK_COUNT_MULTIPLIER)]
 
@@ -178,7 +178,7 @@ def test_radarworker_init_update_and_data(monkeypatch):
 
 
 def test_berthworker_composition_and_naming(monkeypatch):
-    # Make deterministic: 10 bents -> 30 hooks; 5 radars named B<code>RD1..5
+    # Make deterministic: 10 bollards -> 30 hooks; 5 radars named B<code>RD1..5
     monkeypatch.setattr(builder.random, "randint", lambda a, b: 10)
 
     def fake_choice(seq):  # noqa: ANN001
@@ -190,7 +190,7 @@ def test_berthworker_composition_and_naming(monkeypatch):
 
     monkeypatch.setattr(builder.random, "choice", fake_choice)
     # Deterministic children
-    monkeypatch.setattr(builder, "random_bent_name", lambda: "BNT999")
+    monkeypatch.setattr(builder, "random_bollard_name", lambda: "BOL999")
     monkeypatch.setattr(
         builder, "generate_ship", lambda: ShipData(name="Test Ship", vessel_id="1234")
     )
@@ -198,21 +198,21 @@ def test_berthworker_composition_and_naming(monkeypatch):
     bw = builder.BerthWorker("A")
 
     assert bw.name == "Berth A"
-    assert bw.bent_count == 10
+    assert bw.bollard_count == 10
     assert bw.hook_count == 30
     assert len(bw.radars) == 5
     assert [r.name for r in bw.radars] == ["BARD1", "BARD2", "BARD3", "BARD4", "BARD5"]
-    assert len(bw.bents) == 10
+    assert len(bw.bollards) == 10
 
     # Data is a Pydantic model with nested models
     data = bw.data
     dumped = data.model_dump()
     assert dumped["name"] == "Berth A"
-    assert dumped["bent_count"] == 10
+    assert dumped["bollard_count"] == 10
     assert dumped["hook_count"] == 30
     assert dumped["ship"]["vessel_id"] == "1234"
     assert len(dumped["radars"]) == 5
-    assert len(dumped["bents"]) == 10
+    assert len(dumped["bollards"]) == 10
 
 
 def test_portworker_builds_expected_structure(monkeypatch):
@@ -223,7 +223,7 @@ def test_portworker_builds_expected_structure(monkeypatch):
     monkeypatch.setattr(
         builder, "generate_ship", lambda: ShipData(name="SS Test", vessel_id="9876")
     )
-    monkeypatch.setattr(builder, "random_bent_name", lambda: "BNT111")
+    monkeypatch.setattr(builder, "random_bollard_name", lambda: "BOL111")
     # For radar count per berth
     monkeypatch.setattr(
         builder.random,

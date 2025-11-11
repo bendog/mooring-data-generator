@@ -3,8 +3,8 @@ from pydantic import ValidationError
 
 from mooring_data_generator.models import (
     TENSION_LIMITS,
-    BentData,
     BerthData,
+    BollardData,
     HookData,
     PortData,
     RadarData,
@@ -91,17 +91,17 @@ def test_hookdata_name_and_tension_bounds():
         HookData(name="Hook 1", tension=10, faulted=False, attached_line="BOW")
 
 
-def test_bentdata_and_berthdata_nested_valid():
+def test_bollard_data_and_berth_data_nested_valid():
     hooks = [
         HookData(name="Hook 1", tension=10, faulted=False, attached_line="HEAD"),
         HookData(name="Hook 2", tension=20, faulted=True, attached_line="BREAST"),
     ]
-    bent = BentData(name="BNT123", hooks=hooks)
-    assert bent.model_dump(by_alias=True)["Name"] == "BNT123"
+    bollard = BollardData(name="BOL123", hooks=hooks)
+    assert bollard.model_dump(by_alias=True)["Name"] == "BOL123"
 
     berth = BerthData(
         name="Berth A",
-        bent_count=10,
+        bollard_count=10,
         hook_count=27,
         ship=ShipData(name="Evergreen", vessel_id="1234"),
         radars=[
@@ -109,51 +109,51 @@ def test_bentdata_and_berthdata_nested_valid():
                 name="BARD1", ship_distance=1.2, distance_change=0.1, distance_status="ACTIVE"
             )
         ],
-        bents=[bent],
+        bollards=[bollard],
     )
 
     dumped = berth.model_dump(by_alias=True)
     # Spot-check nested alias keys exist
-    assert "Name" in dumped and "BentCount" in dumped and "HookCount" in dumped
-    assert "Ship" in dumped and "Radars" in dumped and "Bents" in dumped
+    assert "Name" in dumped and "BollardCount" in dumped and "HookCount" in dumped
+    assert "Ship" in dumped and "Radars" in dumped and "Bollards" in dumped
 
     # Name pattern and counts bounds
     with pytest.raises(ValidationError):
         BerthData(
             name="Berth 1",
-            bent_count=10,
+            bollard_count=10,
             hook_count=30,
             ship=ShipData(name="Evergreen", vessel_id="1234"),
             radars=[],
-            bents=[],
+            bollards=[],
         )
     with pytest.raises(ValidationError):
         BerthData(
             name="Berth A",
-            bent_count=0,
+            bollard_count=0,
             hook_count=30,
             ship=ShipData(name="Evergreen", vessel_id="1234"),
             radars=[],
-            bents=[],
+            bollards=[],
         )
     with pytest.raises(ValidationError):
         BerthData(
             name="Berth A",
-            bent_count=10,
+            bollard_count=10,
             hook_count=0,
             ship=ShipData(name="Evergreen", vessel_id="1234"),
             radars=[],
-            bents=[],
+            bollards=[],
         )
 
 
-def test_portdata_full_payload_and_aliases():
+def test_port_data_full_payload_and_aliases():
     port = PortData(
         name="Port X",
         berths=[
             BerthData(
                 name="Berth A",
-                bent_count=10,
+                bollard_count=10,
                 hook_count=30,
                 ship=ShipData(name="Evergreen", vessel_id="1234"),
                 radars=[
@@ -164,9 +164,9 @@ def test_portdata_full_payload_and_aliases():
                         distance_status="ACTIVE",
                     )
                 ],
-                bents=[
-                    BentData(
-                        name="BNT001",
+                bollards=[
+                    BollardData(
+                        name="BOL001",
                         hooks=[
                             HookData(
                                 name="Hook 1", tension=10, faulted=False, attached_line="HEAD"

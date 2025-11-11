@@ -3,7 +3,7 @@ import logging
 import random
 from math import ceil
 
-from .models import BentData, BerthData, HookData, PortData, RadarData, ShipData
+from .models import BerthData, BollardData, HookData, PortData, RadarData, ShipData
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ NAUTICAL_BASE_NAMES: list[str] = [
 ]
 
 
-BENT_NAMES: list[str] = [f"BNT{x:03d}" for x in range(1, 999)]
+BOLLARD_NAMES: list[str] = [f"BOL{x:03d}" for x in range(1, 999)]
 
 SHIP_IDS: list[str] = [f"{x:04d}" for x in range(1, 9999)]
 
@@ -121,8 +121,8 @@ STDEV_DISTANCES = 6.73
 MEAN_CHANGES = 0.68
 STDEV_CHANGES = 2.6
 
-BENT_COUNT_MIN = 9
-BENT_COUNT_MAX = 15
+BOLLARD_COUNT_MIN = 9
+BOLLARD_COUNT_MAX = 15
 
 HOOK_COUNT_MULTIPLIER = 3
 
@@ -151,10 +151,10 @@ def random_wa_port_name() -> str:
     return random_single_use_choice(WA_PORT_NAMES)
 
 
-def random_bent_name() -> str:
-    """Return a random bent name."""
-    global BENT_NAMES
-    return random_single_use_choice(BENT_NAMES)
+def random_bollard_name() -> str:
+    """Return a random bollard name."""
+    global BOLLARD_NAMES
+    return random_single_use_choice(BOLLARD_NAMES)
 
 
 def generate_ship() -> ShipData:
@@ -195,36 +195,36 @@ class HookWorker:
         )
 
 
-class BentWorker:
-    """a worker class for managing bents and cascading data"""
+class BollardWorker:
+    """a worker class for managing bollards and cascading data"""
 
-    def __init__(self, bent_number: int, total_bents: int):
-        self.bent_number: int = bent_number
-        self.name = random_bent_name()
+    def __init__(self, bollard_number: int, total_bollards: int):
+        self.bollard_number: int = bollard_number
+        self.name = random_bollard_name()
         self.hooks: list[HookWorker] = []
-        bent_position = bent_number / total_bents
-        if bent_position < 0.2:
+        bollard_position = bollard_number / total_bollards
+        if bollard_position < 0.2:
             attached_line = "HEAD"
-        elif 0.8 < bent_position:
+        elif 0.8 < bollard_position:
             attached_line = "STERN"
-        elif 0.4 < bent_position < 0.6:
+        elif 0.4 < bollard_position < 0.6:
             attached_line = "BREAST"
         else:
             attached_line = "SPRING"
         hook_count_start: int = (
-            (self.bent_number * HOOK_COUNT_MULTIPLIER) - HOOK_COUNT_MULTIPLIER + 1
+            (self.bollard_number * HOOK_COUNT_MULTIPLIER) - HOOK_COUNT_MULTIPLIER + 1
         )
         for hook_number in range(hook_count_start, hook_count_start + HOOK_COUNT_MULTIPLIER):
             self.hooks.append(HookWorker(hook_number, attached_line=attached_line))
 
     def update(self):
-        """update the bent and cascading data"""
+        """update the bollard and cascading data"""
         for hook in self.hooks:
             hook.update()
 
     @property
-    def data(self) -> BentData:
-        return BentData(
+    def data(self) -> BollardData:
+        return BollardData(
             name=self.name,
             hooks=[hook.data for hook in self.hooks],
         )
@@ -266,17 +266,17 @@ class BerthWorker:
 
     def __init__(self, berth_code: str):
         self.berth_code: str = berth_code
-        self.bent_count: int = random.randint(BENT_COUNT_MIN, BENT_COUNT_MAX)
-        self.hook_count: int = self.bent_count * HOOK_COUNT_MULTIPLIER
+        self.bollard_count: int = random.randint(BOLLARD_COUNT_MIN, BOLLARD_COUNT_MAX)
+        self.hook_count: int = self.bollard_count * HOOK_COUNT_MULTIPLIER
         self.ship: ShipData = generate_ship()
         self.radars: list[RadarWorker] = []
         for radar_num in range(1, random.choice([5, 6, 6, 6]) + 1):
             radar_name = f"B{berth_code}RD{radar_num}"
             self.radars.append(RadarWorker(radar_name))
 
-        self.bents: list[BentWorker] = []
-        for bent_num in range(1, self.bent_count + 1):
-            self.bents.append(BentWorker(bent_num, self.bent_count))
+        self.bollards: list[BollardWorker] = []
+        for bollard_num in range(1, self.bollard_count + 1):
+            self.bollards.append(BollardWorker(bollard_num, self.bollard_count))
 
     @property
     def name(self) -> str:
@@ -285,18 +285,18 @@ class BerthWorker:
     def update(self):
         for radar in self.radars:
             radar.update()
-        for bent in self.bents:
-            bent.update()
+        for bollard in self.bollards:
+            bollard.update()
 
     @property
     def data(self) -> BerthData:
         return BerthData(
             name=self.name,
-            bent_count=self.bent_count,
+            bollard_count=self.bollard_count,
             hook_count=self.hook_count,
             ship=self.ship,
             radars=[radar.data for radar in self.radars],
-            bents=[bent.data for bent in self.bents],
+            bollards=[bollard.data for bollard in self.bollards],
         )
 
 
