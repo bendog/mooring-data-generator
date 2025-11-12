@@ -222,6 +222,17 @@ def random_bollard_structure(bollard_count: int) -> BollardStructure:
             strict=True,
         )
     )
+    # Check hooks
+    # line_status_count: dict[str, dict[str, int]] = {
+    #     line_name: {"True": 0, "False": 0, "None": 0} for line_name in set(bollard_line_name_list)
+    # }
+    # for idx, hook_status in enumerate(hooks_active_list):
+    #     line_name: str = bollard_line_name_list[idx]
+    #     line_status_count[line_name]["True"] += len([x for x in hook_status if x is True])
+    #     line_status_count[line_name]["False"] += len([x for x in hook_status if x is False])
+    #     line_status_count[line_name]["None"] += len([x for x in hook_status if x is None])
+
+    # TODO: perhaps the first hook for a new type of line is always true?
 
     bollard_and_hook_structure: BollardStructure = list(
         zip(bollard_number_list, bollard_line_name_list, hooks_active_list, strict=True)
