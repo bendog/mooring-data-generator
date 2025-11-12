@@ -1,9 +1,24 @@
 import json
 import logging
 import random
+import sys
 from math import ceil
 
 from .models import BerthData, BollardData, HookData, PortData, RadarData, ShipData
+
+if sys.version_info < (3, 13):
+    # if batched doesn't exist, reinvent it.
+    from itertools import islice
+
+    def batched(iterable, n, *args, **kwargs):
+        if n < 1:
+            raise ValueError("n must be at least one")
+        iterator = iter(iterable)
+        while batch := tuple(islice(iterator, n)):
+            yield batch
+else:
+    from itertools import batched
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +138,8 @@ STDEV_CHANGES = 2.6
 
 BOLLARD_COUNT_MIN = 9
 BOLLARD_COUNT_MAX = 15
+MEAN_BOLLARD_COUNT = 12
+STDEV_BOLLARD_COUNT = 2.2
 
 HOOK_COUNT_MULTIPLIER = 3
 
@@ -166,14 +183,60 @@ def generate_ship() -> ShipData:
     )
 
 
+def line_name_generator(bollard_list: list[int]) -> list[str]:
+    """return a list of which lines will be used for which bollards"""
+    response: list[str] = []
+    for bollard_number in bollard_list:
+        bollard_position = bollard_number / len(bollard_list)
+        if bollard_position < 0.25:
+            attached_line = "HEAD"
+        elif 0.83 < bollard_position:
+            attached_line = "STERN"
+        elif 0.4 < bollard_position < 0.65:
+            attached_line = "BREAST"
+        else:
+            attached_line = "SPRING"
+        response.append(attached_line)
+    return response
+
+
+HookStatus = bool | None
+
+HooksStatuses = tuple[HookStatus, ...]
+
+BollardStructure = list[tuple[int, str, HooksStatuses]]
+
+
+def random_bollard_structure(bollard_count: int) -> BollardStructure:
+    """build a balanced random bollard structure"""
+    bollard_number_list: list[int] = list(range(1, bollard_count + 1))
+    bollard_line_name_list: list[str] = line_name_generator(bollard_number_list)
+    hooks_active_list: list[tuple[bool | None, ...]] = list(
+        batched(
+            random.choices(
+                (True, False, None),
+                weights=(5, 4, 0.5),
+                k=len(bollard_number_list) * HOOK_COUNT_MULTIPLIER,
+            ),
+            3,
+            strict=True,
+        )
+    )
+
+    bollard_and_hook_structure: BollardStructure = list(
+        zip(bollard_number_list, bollard_line_name_list, hooks_active_list, strict=True)
+    )
+    return bollard_and_hook_structure
+
+
 class HookWorker:
     """a worker class for generating and managing changes in Hook data."""
 
-    def __init__(self, hook_number: int, attached_line: str):
+    def __init__(self, hook_number: int, hook_status: HookStatus, attached_line: str):
         self.name: str = f"Hook {hook_number}"
-        self.active: bool = random.choice([True, False, False])
+        self.active: bool = True if hook_status is True else False
         # a 5% change of being in fault state
-        self.fault: bool = random.choices([True, False], weights=[0.05, 0.95])[0]
+        self.fault: bool = True if hook_status is None else False
         self.attached_line = None
         self.tension = None
         if self.active:
@@ -181,7 +244,7 @@ class HookWorker:
             self.update()
 
     def update(self):
-        if self.active:
+        if self.active and not self.fault:
             self.tension = abs(ceil(random.gauss(MEAN_CHANGES, STDEV_CHANGES)))
 
     @property
@@ -198,24 +261,17 @@ class HookWorker:
 class BollardWorker:
     """a worker class for managing bollards and cascading data"""
 
-    def __init__(self, bollard_number: int, total_bollards: int):
+    def __init__(self, bollard_number: int, attached_line: str, hook_statuses: HooksStatuses):
         self.bollard_number: int = bollard_number
         self.name = random_bollard_name()
         self.hooks: list[HookWorker] = []
-        bollard_position = bollard_number / total_bollards
-        if bollard_position < 0.2:
-            attached_line = "HEAD"
-        elif 0.8 < bollard_position:
-            attached_line = "STERN"
-        elif 0.4 < bollard_position < 0.6:
-            attached_line = "BREAST"
-        else:
-            attached_line = "SPRING"
         hook_count_start: int = (
             (self.bollard_number * HOOK_COUNT_MULTIPLIER) - HOOK_COUNT_MULTIPLIER + 1
         )
-        for hook_number in range(hook_count_start, hook_count_start + HOOK_COUNT_MULTIPLIER):
-            self.hooks.append(HookWorker(hook_number, attached_line=attached_line))
+        hook_numbers = range(hook_count_start, hook_count_start + HOOK_COUNT_MULTIPLIER)
+
+        for hook_number, hook_status in zip(hook_numbers, hook_statuses, strict=True):
+            self.hooks.append(HookWorker(hook_number, hook_status, attached_line=attached_line))
 
     def update(self):
         """update the bollard and cascading data"""
@@ -233,9 +289,9 @@ class BollardWorker:
 class RadarWorker:
     """a worker class for generating and managing changes in Radar data."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, active: bool):
         self.name: str = name
-        self.active: bool = random.choice([True, False, False])
+        self.active: bool = active
         self.distance: float | None = None
         self.change: float | None = None
         if self.active:
@@ -266,17 +322,28 @@ class BerthWorker:
 
     def __init__(self, berth_code: str):
         self.berth_code: str = berth_code
-        self.bollard_count: int = random.randint(BOLLARD_COUNT_MIN, BOLLARD_COUNT_MAX)
+        # self.bollard_count: int = random.randint(BOLLARD_COUNT_MIN, BOLLARD_COUNT_MAX)
+        self.bollard_count: int = ceil(random.gauss(MEAN_BOLLARD_COUNT, STDEV_BOLLARD_COUNT))
         self.hook_count: int = self.bollard_count * HOOK_COUNT_MULTIPLIER
         self.ship: ShipData = generate_ship()
         self.radars: list[RadarWorker] = []
-        for radar_num in range(1, random.choice([5, 6, 6, 6]) + 1):
+        radar_number_list: list[int] = list(range(1, random.choice([5, 6, 6, 6]) + 1))
+        radar_active_list: list[bool] = random.choices(
+            [True, False], weights=(2, 1), k=len(radar_number_list)
+        )
+        radars: list[tuple[int, bool]] = list(
+            zip(radar_number_list, radar_active_list, strict=True)
+        )
+        for radar_num, radar_active in radars:
             radar_name = f"B{berth_code}RD{radar_num}"
-            self.radars.append(RadarWorker(radar_name))
+            self.radars.append(RadarWorker(radar_name, radar_active))
 
         self.bollards: list[BollardWorker] = []
-        for bollard_num in range(1, self.bollard_count + 1):
-            self.bollards.append(BollardWorker(bollard_num, self.bollard_count))
+
+        for bollard_num, bollard_line, hook_structure in random_bollard_structure(
+            self.bollard_count
+        ):
+            self.bollards.append(BollardWorker(bollard_num, bollard_line, hook_structure))
 
     @property
     def name(self) -> str:

@@ -70,15 +70,11 @@ def test_generate_ship_uses_ship_ids_and_name(monkeypatch):
 
 
 def test_hookworker_active_and_update(monkeypatch):
-    # Make HookWorker active and non-faulted
-    monkeypatch.setattr(
-        builder.random, "choice", lambda seq: True if seq == [True, False, False] else seq[0]
-    )
-    monkeypatch.setattr(builder.random, "choices", lambda seq, weights=None: [False])  # noqa: ARG005
+    # Active and non-faulted (hook_status=True)
     # Make gauss determinate for tension: ceil(abs(3.2)) -> 4
     monkeypatch.setattr(builder.random, "gauss", lambda mu, sigma: 3.2)  # noqa: ARG005
 
-    hw = builder.HookWorker(hook_number=7, attached_line="HEAD")
+    hw = builder.HookWorker(hook_number=7, hook_status=True, attached_line="HEAD")
     # On init, because active=True, update() called -> tension set
     assert hw.name == "Hook 7"
     assert hw.attached_line == "HEAD"
@@ -98,12 +94,8 @@ def test_hookworker_active_and_update(monkeypatch):
 
 
 def test_hookworker_inactive_has_no_tension(monkeypatch):
-    # Force inactive
-    monkeypatch.setattr(
-        builder.random, "choice", lambda seq: False if seq == [True, False, False] else seq[0]
-    )
-
-    hw = builder.HookWorker(hook_number=1, attached_line="BREAST")
+    # Inactive (hook_status=False)
+    hw = builder.HookWorker(hook_number=1, hook_status=False, attached_line="BREAST")
     assert hw.attached_line is None
     assert hw.tension is None
 
@@ -120,22 +112,21 @@ def test_hookworker_inactive_has_no_tension(monkeypatch):
 def test_bollardworker_hook_attachment_and_numbering(
     monkeypatch, bollard_number, total_bollards, expected_line
 ):
-    # Ensure hooks start with expected numbers and are active so attached_line is set
-    monkeypatch.setattr(
-        builder.random,
-        "choice",
-        lambda seq: True
-        if seq == [True, False, False]
-        else (5 if seq == [5, 6, 6, 6] else seq[0]),
-    )
-    monkeypatch.setattr(
-        builder.random, "choices", lambda seq, weights=None: [False]
-    )  # non-faulted
+    # Hooks active and non-faulted; deterministic tension
     monkeypatch.setattr(builder.random, "gauss", lambda mu, sigma: 1.1)  # tension -> ceil(1.1)=2
     # Deterministic bollard names
     monkeypatch.setattr(builder, "random_bollard_name", lambda: f"BOL{bollard_number:03d}")
 
-    bw = builder.BollardWorker(bollard_number=bollard_number, total_bollards=total_bollards)
+    # Determine attached line for this bollard
+    attached_line = builder.line_name_generator(list(range(1, total_bollards + 1)))[
+        bollard_number - 1
+    ]
+    # Provide hook statuses: 3 active, non-faulted
+    hook_statuses = (True, True, True)
+
+    bw = builder.BollardWorker(
+        bollard_number=bollard_number, attached_line=attached_line, hook_statuses=hook_statuses
+    )
 
     # 3 hooks per bollard
     assert len(bw.hooks) == builder.HOOK_COUNT_MULTIPLIER
@@ -151,17 +142,11 @@ def test_bollardworker_hook_attachment_and_numbering(
 
 
 def test_radarworker_init_update_and_data(monkeypatch):
-    # Active radar
-    def fake_choice(seq):  # noqa: ANN001
-        return True if seq == [True, False, False] else seq[0]
-
-    monkeypatch.setattr(builder.random, "choice", fake_choice)
-
     # Provide a generator of values for gauss calls
     values = iter([12.5, 0.7, 8.0])  # init distance, init change, update new_distance
     monkeypatch.setattr(builder.random, "gauss", lambda mu, sigma: next(values))  # noqa: ARG005
 
-    rw = builder.RadarWorker("BARD1")
+    rw = builder.RadarWorker("BARD1", active=True)
     assert rw.active is True
     assert rw.distance == pytest.approx(12.5)
     assert rw.change == pytest.approx(0.7)
@@ -179,16 +164,24 @@ def test_radarworker_init_update_and_data(monkeypatch):
 
 def test_berthworker_composition_and_naming(monkeypatch):
     # Make deterministic: 10 bollards -> 30 hooks; 5 radars named B<code>RD1..5
-    monkeypatch.setattr(builder.random, "randint", lambda a, b: 10)
+    # Set bollard_count via gauss -> ceil(10.0) = 10
+    def gauss_stub(mu, sigma):  # noqa: ANN001, ARG001
+        return 10.0
 
-    def fake_choice(seq):  # noqa: ANN001
-        if seq == [5, 6, 6, 6]:
-            return 5
-        if seq == [True, False, False]:
-            return False  # make hooks/radars inactive by default here
-        return seq[0]
+    monkeypatch.setattr(builder.random, "gauss", gauss_stub)
 
-    monkeypatch.setattr(builder.random, "choice", fake_choice)
+    # Radar count selection to 5 for range(1, choice+1)
+    monkeypatch.setattr(builder.random, "choice", lambda seq: 5 if seq == [5, 6, 6, 6] else seq[0])
+
+    # Make all radars inactive and hooks inactive/non-faulted for determinism
+    def choices_stub(seq, weights=None, k=None):  # noqa: ANN001, ARG001
+        if seq == [True, False] and k is not None:
+            return [False] * k
+        if tuple(seq) == (True, False, None) and k is not None:
+            return [False] * k
+        return [seq[0]] * (k if k is not None else 1)
+
+    monkeypatch.setattr(builder.random, "choices", choices_stub)
     # Deterministic children
     monkeypatch.setattr(builder, "random_bollard_name", lambda: "BOL999")
     monkeypatch.setattr(
@@ -224,14 +217,17 @@ def test_portworker_builds_expected_structure(monkeypatch):
         builder, "generate_ship", lambda: ShipData(name="SS Test", vessel_id="9876")
     )
     monkeypatch.setattr(builder, "random_bollard_name", lambda: "BOL111")
-    # For radar count per berth
-    monkeypatch.setattr(
-        builder.random,
-        "choice",
-        lambda seq: 5
-        if seq == [5, 6, 6, 6]
-        else (False if seq == [True, False, False] else seq[0]),
-    )
+    # For radar count per berth and inactive radars/hooks
+    monkeypatch.setattr(builder.random, "choice", lambda seq: 5 if seq == [5, 6, 6, 6] else seq[0])
+
+    def choices_stub(seq, weights=None, k=None):  # noqa: ANN001, ARG001
+        if seq == [True, False] and k is not None:
+            return [False] * k
+        if tuple(seq) == (True, False, None) and k is not None:
+            return [False] * k
+        return [seq[0]] * (k if k is not None else 1)
+
+    monkeypatch.setattr(builder.random, "choices", choices_stub)
 
     port = builder.PortWorker()
     assert port.name == "Fremantle"
