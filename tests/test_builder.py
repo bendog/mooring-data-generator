@@ -104,8 +104,8 @@ def test_hookworker_inactive_has_no_tension(monkeypatch):
     "bollard_number,total_bollards,expected_line",
     [
         (1, 10, "HEAD"),  # 0.1
-        (3, 10, "SPRING"),  # 0.3
-        (5, 10, "BREAST"),  # 0.5
+        (3, 10, "BREAST"),  # 0.3
+        (5, 10, "SPRING"),  # 0.5
         (9, 10, "STERN"),  # 0.9
     ],
 )
@@ -234,8 +234,8 @@ def test_portworker_builds_expected_structure(monkeypatch):
     assert len(port.berths) == 2
 
     # NB: Current implementation uses "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[berth_num], so first is "B"
-    assert port.berths[0].name == "Berth B"
-    assert port.berths[1].name == "Berth C"
+    assert port.berths[0].name == "Berth A"
+    assert port.berths[1].name == "Berth B"
 
     pdata = port.data
     dumped = pdata.model_dump()
