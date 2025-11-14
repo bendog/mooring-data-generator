@@ -1,5 +1,6 @@
 import argparse
 import json
+import statistics
 import sys
 from collections import defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,8 +24,8 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
     # Format mode: None for default, "json" for JSON output
     format_mode: bool = False
 
-    # Lines summary mode: when True, only print berth names and counts of line names
-    filter_mode: Literal["lines"] | None = None
+    # Summary mode: restrict output to a specific summary
+    filter_mode: Literal["lines", "tensions"] | None = None
 
     # Disable default logging to stderr; we print our own structured output
     def log_message(self, format: str, *args) -> None:  # noqa: A003 - match BaseHTTPRequestHandler
@@ -55,9 +56,13 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
 
     def _print_request(self, body: bytes) -> None:
         """print the request to stdoutmo"""
-        # In lines mode, suppress standard request printout and only show summary
+        # In summary modes, suppress standard request printout and only show summary
         if self.filter_mode == "lines":
             self._print_lines_summary(body)
+            sys.stdout.flush()
+            return
+        if self.filter_mode == "tensions":
+            self._print_tensions_summary(body)
             sys.stdout.flush()
             return
         # First line
@@ -117,6 +122,58 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             # Build a compact one-line summary
             parts = [f"{k}:{v}" for k, v in count_of_lines.items()]
             print(f"{name} -> " + " ".join(parts))
+
+    def _print_tensions_summary(self, body: bytes) -> None:  # noqa: C901
+        """Print per-berth tension statistics (min, max, median, mean).
+
+        Expects JSON body compatible with PortData model using alias field names
+        (camelCase), e.g. berths[].bollards[].hooks[].tension.
+        """
+        if not body:
+            print("-- No Body --")
+            return
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            print(f"-- Failed to parse JSON body: {e}")
+            return
+
+        berths = payload.get("berths")
+        if not isinstance(berths, list):
+            print("-- No berths found in payload --")
+            return
+
+        for berth in berths:
+            name = berth.get("name", "<unknown>")
+            tensions: list[float] = []
+            for bollard in berth.get("bollards", []) or []:
+                for hook in bollard.get("hooks", []) or []:
+                    t = hook.get("tension")
+                    if isinstance(t, (int, float)):
+                        tensions.append(float(t))
+
+            if not tensions:
+                print(f"{name} -> min=N/A max=N/A median=N/A mean=N/A")
+                continue
+
+            t_min = min(tensions)
+            t_max = max(tensions)
+            t_median = statistics.median(tensions)
+            t_mean = (
+                statistics.fmean(tensions)
+                if hasattr(statistics, "fmean")
+                else sum(tensions) / len(tensions)
+            )
+
+            # Format with up to 2 decimal places, but avoid trailing .0 noise for ints
+            def fmt(x: float) -> str:
+                if abs(x - round(x)) < 1e-9:
+                    return str(int(round(x)))
+                return f"{x:.2f}"
+
+            print(
+                f"{name} -> min={fmt(t_min)} max={fmt(t_max)} median={fmt(t_median)} mean={fmt(t_mean)}"
+            )
 
     def _respond_ok(self) -> None:
         message = b"OK\n"
@@ -218,6 +275,14 @@ def cli(argv: list[str] | None = None) -> None:
             "Suppresses full request printing."
         ),
     )
+    parser.add_argument(
+        "--tensions",
+        action="store_true",
+        help=(
+            "Only output a list of berths with max/min/median/mean of hook tensions per berth. "
+            "Suppresses full request printing."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
@@ -231,8 +296,10 @@ def cli(argv: list[str] | None = None) -> None:
     if args.format:
         PrintingRequestHandler.format_mode = args.format
 
-    # Configure lines summary mode
-    if getattr(args, "lines", False):
+    # Configure summary modes (tensions takes precedence if both are set)
+    if getattr(args, "tensions", False):
+        PrintingRequestHandler.filter_mode = "tensions"
+    elif getattr(args, "lines", False):
         PrintingRequestHandler.filter_mode = "lines"
 
     serve(port=args.port, host=args.host)
