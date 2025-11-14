@@ -129,10 +129,12 @@ BOLLARD_NAMES: list[str] = [f"BOL{x:03d}" for x in range(1, 999)]
 SHIP_IDS: list[str] = [f"{x:04d}" for x in range(1, 9999)]
 
 
-MEAN_TENSIONS = 6
-STDEV_TENSIONS = 5
+MEAN_TENSIONS = 10
+STDEV_TENSIONS = 10
+
 MEAN_DISTANCES = 9.38
 STDEV_DISTANCES = 6.73
+
 MEAN_CHANGES = 0.68
 STDEV_CHANGES = 2.6
 
@@ -142,6 +144,14 @@ MEAN_BOLLARD_COUNT = 12
 STDEV_BOLLARD_COUNT = 2.2
 
 HOOK_COUNT_MULTIPLIER = 3
+
+
+def positive_only_gauss(mean, std_dev):
+    """only release a positive std average, incredibly inefficient."""
+    result = -1
+    while result < 0:
+        result = random.gauss(mean, std_dev)
+    return result
 
 
 def random_single_use_choice(list_of_strings: list[str]) -> str:
@@ -254,11 +264,11 @@ class HookWorker:
         self.tension = None
         if self.active:
             self.attached_line = attached_line
-            self.update()
+            self.tension = ceil(positive_only_gauss(MEAN_TENSIONS, STDEV_TENSIONS))
 
     def update(self):
         if self.active and not self.fault:
-            self.tension = abs(ceil(random.gauss(MEAN_CHANGES, STDEV_CHANGES)))
+            self.tension = ceil(positive_only_gauss(MEAN_TENSIONS, STDEV_TENSIONS))
 
     @property
     def data(self) -> HookData:
@@ -308,12 +318,12 @@ class RadarWorker:
         self.distance: float | None = None
         self.change: float | None = None
         if self.active:
-            self.distance: float = abs(random.gauss(MEAN_DISTANCES, STDEV_DISTANCES))
-            self.change: float = abs(random.gauss(MEAN_CHANGES, STDEV_CHANGES))
+            self.distance: float = positive_only_gauss(MEAN_DISTANCES, STDEV_DISTANCES)
+            self.change: float = positive_only_gauss(MEAN_CHANGES, STDEV_CHANGES)
 
     def update(self) -> tuple[float, float]:
         if self.active:
-            new_distance: float = abs(random.gauss(MEAN_TENSIONS, STDEV_TENSIONS))
+            new_distance: float = positive_only_gauss(MEAN_TENSIONS, STDEV_TENSIONS)
             new_change: float = abs(self.distance - new_distance)
             self.distance = new_distance
             self.change = new_change
@@ -336,7 +346,9 @@ class BerthWorker:
     def __init__(self, berth_code: str):
         self.berth_code: str = berth_code
         # self.bollard_count: int = random.randint(BOLLARD_COUNT_MIN, BOLLARD_COUNT_MAX)
-        self.bollard_count: int = ceil(random.gauss(MEAN_BOLLARD_COUNT, STDEV_BOLLARD_COUNT))
+        self.bollard_count: int = ceil(
+            positive_only_gauss(MEAN_BOLLARD_COUNT, STDEV_BOLLARD_COUNT)
+        )
         self.hook_count: int = self.bollard_count * HOOK_COUNT_MULTIPLIER
         self.ship: ShipData = generate_ship()
         self.radars: list[RadarWorker] = []
