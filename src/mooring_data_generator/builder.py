@@ -280,9 +280,13 @@ class HookWorker:
     def tension_trend(self) -> int:
         """determine the tension trend either positive or negative"""
         if self._tension < 0.001:
+            # if tension is low make the trend go up
             self._tension_tend = 1
+        elif self._tension > 50:
+            # if the tension is too high, make the tension trend go down
+            self._tension_tend = -1
+        # only change a direction in small use cases
         elif random.random() > 0.9:
-            # only change a direction in small use cases
             self._tension_tend *= -1
         if self._tension_tend not in [-1, 1]:
             raise ValueError("tension trend must be either positive or negative 1")
