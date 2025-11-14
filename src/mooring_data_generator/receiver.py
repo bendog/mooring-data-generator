@@ -124,7 +124,7 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             print(f"{name} -> " + " ".join(parts))
 
     def _print_tensions_summary(self, body: bytes) -> None:  # noqa: C901
-        """Print per-berth tension statistics (min, max, median, mean).
+        """Print per-berth tension statistics (min, max, median, mean, std).
 
         Expects JSON body compatible with PortData model using alias field names
         (camelCase), e.g. berths[].bollards[].hooks[].tension.
@@ -153,7 +153,7 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
                         tensions.append(float(t))
 
             if not tensions:
-                print(f"{name} -> min=N/A max=N/A median=N/A mean=N/A")
+                print(f"{name} -> min=N/A max=N/A median=N/A mean=N/A std=N/A")
                 continue
 
             t_min = min(tensions)
@@ -164,6 +164,8 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
                 if hasattr(statistics, "fmean")
                 else sum(tensions) / len(tensions)
             )
+            # Use population standard deviation to avoid ValueError on single sample
+            t_std = statistics.pstdev(tensions)
 
             # Format with up to 2 decimal places, but avoid trailing .0 noise for ints
             def fmt(x: float) -> str:
@@ -172,7 +174,7 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
                 return f"{x:.2f}"
 
             print(
-                f"{name} -> min={fmt(t_min)} max={fmt(t_max)} median={fmt(t_median)} mean={fmt(t_mean)}"
+                f"{name} -> min={fmt(t_min)} max={fmt(t_max)} median={fmt(t_median)} mean={fmt(t_mean)} std={fmt(t_std)}"
             )
 
     def _respond_ok(self) -> None:
@@ -279,7 +281,7 @@ def cli(argv: list[str] | None = None) -> None:
         "--tensions",
         action="store_true",
         help=(
-            "Only output a list of berths with max/min/median/mean of hook tensions per berth. "
+            "Only output a list of berths with max/min/median/mean/std of hook tensions per berth. "
             "Suppresses full request printing."
         ),
     )

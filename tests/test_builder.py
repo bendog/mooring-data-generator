@@ -83,7 +83,8 @@ def test_hookworker_active_and_update(monkeypatch):
 
     # Update again should keep producing valid integer tension
     hw.update()
-    assert isinstance(hw.tension, int)
+    value = hw.tension
+    assert isinstance(value, int)
     assert hw.tension >= 0
 
     data = hw.data

@@ -132,6 +132,9 @@ SHIP_IDS: list[str] = [f"{x:04d}" for x in range(1, 9999)]
 MEAN_TENSIONS = 10
 STDEV_TENSIONS = 10
 
+MEAN_TENSIONS_CHANGE = 1
+STDEV_TENSIONS_CHANGE = 0.5
+
 MEAN_DISTANCES = 9.38
 STDEV_DISTANCES = 6.73
 
@@ -261,14 +264,34 @@ class HookWorker:
         # a 5% change of being in fault state
         self.fault: bool = True if hook_status is None else False
         self.attached_line = None
-        self.tension = None
+        self._tension = None
+        self._tension_tend = random.choice([-1, 1])
         if self.active:
             self.attached_line = attached_line
-            self.tension = ceil(positive_only_gauss(MEAN_TENSIONS, STDEV_TENSIONS))
+            self._tension = positive_only_gauss(MEAN_TENSIONS, STDEV_TENSIONS)
+
+    @property
+    def tension(self) -> int | None:
+        if self._tension is not None:
+            return ceil(abs(self._tension))
+        return self._tension
+
+    @property
+    def tension_trend(self) -> int:
+        """determine the tension trend either positive or negative"""
+        if self._tension < 0.001:
+            self._tension_tend = 1
+        elif random.random() > 0.9:
+            # only change a direction in small use cases
+            self._tension_tend *= -1
+        if self._tension_tend not in [-1, 1]:
+            raise ValueError("tension trend must be either positive or negative 1")
+        return self._tension_tend
 
     def update(self):
         if self.active and not self.fault:
-            self.tension = ceil(positive_only_gauss(MEAN_TENSIONS, STDEV_TENSIONS))
+            change = positive_only_gauss(MEAN_TENSIONS_CHANGE, STDEV_TENSIONS_CHANGE)
+            self._tension += change * self.tension_trend
 
     @property
     def data(self) -> HookData:
