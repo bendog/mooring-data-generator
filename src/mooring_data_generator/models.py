@@ -50,7 +50,15 @@ class HookData(BasePayloadModel):
     name: Annotated[str, Field(pattern=r"^Hook [1-9][0-9]?$")]
     tension: Annotated[int, Field(ge=0, lt=99)] | None
     faulted: bool
-    attached_line: Literal["BREAST", "HEAD", "SPRING", "STERN"] | None
+    attached_line: (
+        Literal[
+            "BREAST",
+            "HEAD",
+            "SPRING",
+            "STERN",
+        ]
+        | None
+    )
 
 
 class BollardData(BasePayloadModel):

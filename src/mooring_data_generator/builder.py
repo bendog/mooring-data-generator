@@ -188,14 +188,16 @@ def line_name_generator(bollard_list: list[int]) -> list[str]:
     response: list[str] = []
     for bollard_number in bollard_list:
         bollard_position = bollard_number / len(bollard_list)
-        if bollard_position < 0.25:
+        if bollard_position <= 0.24:
             attached_line = "HEAD"
-        elif 0.83 < bollard_position:
-            attached_line = "STERN"
-        elif 0.4 < bollard_position < 0.65:
-            attached_line = "BREAST"
-        else:
+        elif bollard_position <= 0.42:
+            attached_line = "BREAST"  # forebreast
+        elif bollard_position <= 0.63:
             attached_line = "SPRING"
+        elif bollard_position <= 0.82:
+            attached_line = "BREAST"  # aftbreast
+        else:
+            attached_line = "STERN"
         response.append(attached_line)
     return response
 
@@ -386,7 +388,7 @@ class PortWorker:
         self.berth_count: int = random.randint(1, 8)
         self.berths: list[BerthWorker] = []
         for berth_num in range(1, self.berth_count + 1):
-            berth_code: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[berth_num]
+            berth_code: str = "-ABCDEFGHIJKLMNOPQRSTUVWXYZ"[berth_num]
             self.berths.append(BerthWorker(berth_code))
 
     def update(self):

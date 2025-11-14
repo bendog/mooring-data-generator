@@ -1,7 +1,9 @@
 import argparse
 import json
 import sys
+from collections import defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Literal
 
 DEFAULT_PORT = 8000
 MAX_SHOW = 1024 * 1
@@ -20,6 +22,9 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
 
     # Format mode: None for default, "json" for JSON output
     format_mode: bool = False
+
+    # Lines summary mode: when True, only print berth names and counts of line names
+    filter_mode: Literal["lines"] | None = None
 
     # Disable default logging to stderr; we print our own structured output
     def log_message(self, format: str, *args) -> None:  # noqa: A003 - match BaseHTTPRequestHandler
@@ -50,6 +55,11 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
 
     def _print_request(self, body: bytes) -> None:
         """print the request to stdoutmo"""
+        # In lines mode, suppress standard request printout and only show summary
+        if self.filter_mode == "lines":
+            self._print_lines_summary(body)
+            sys.stdout.flush()
+            return
         # First line
         http_version = {
             9: "HTTP/0.9",
@@ -72,6 +82,41 @@ class PrintingRequestHandler(BaseHTTPRequestHandler):
             print("-- No Body --")
         print("=" * 80)
         sys.stdout.flush()
+
+    def _print_lines_summary(self, body: bytes) -> None:
+        """Print a compact summary of berths and counts of line names per berth.
+
+        Expects JSON body compatible with PortData model using alias field names
+        (camelCase), e.g. berths[].bollards[].hooks[].attachedLine.
+        """
+        if not body:
+            print("-- No Body --")
+            return
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            print(f"-- Failed to parse JSON body: {e}")
+            return
+
+        berths = payload.get("berths")
+        if not isinstance(berths, list):
+            print("-- No berths found in payload --")
+            return
+
+        # NOTE: I vibecoded this and it's embarrassing, do not judge me
+
+        # Determine line kinds dynamically from the payload (order by first seen)
+        count_of_lines: dict[str, int] = defaultdict(int)
+        for berth in berths:
+            name = berth.get("name", "<unknown>")
+            for bollard in berth.get("bollards", []) or []:
+                for hook in bollard.get("hooks", []) or []:
+                    line = hook.get("attachedLine")
+                    if isinstance(line, str):
+                        count_of_lines[line] += 1
+            # Build a compact one-line summary
+            parts = [f"{k}:{v}" for k, v in count_of_lines.items()]
+            print(f"{name} -> " + " ".join(parts))
 
     def _respond_ok(self) -> None:
         message = b"OK\n"
@@ -165,6 +210,14 @@ def cli(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Output format for request content (json uses json.dumps, otherwise content as received)",
     )
+    parser.add_argument(
+        "--lines",
+        action="store_true",
+        help=(
+            "Only output a list of berth names with counts of each line type per berth. "
+            "Suppresses full request printing."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
@@ -177,6 +230,10 @@ def cli(argv: list[str] | None = None) -> None:
     # Configure output format
     if args.format:
         PrintingRequestHandler.format_mode = args.format
+
+    # Configure lines summary mode
+    if getattr(args, "lines", False):
+        PrintingRequestHandler.filter_mode = "lines"
 
     serve(port=args.port, host=args.host)
 
